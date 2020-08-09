@@ -1,0 +1,137 @@
+-- 新增資料庫
+DROP DATABASE IF EXISTS DinBenDon;
+CREATE DATABASE DinBenDon;
+USE DinBenDon;
+
+-- 新增使用者資料表並插入資料
+CREATE TABLE Users (
+    userId char(20) PRIMARY KEY,
+    password char(20) NOT NULL,
+    name varchar(20) NOT NULL );
+
+INSERT INTO Users VALUES
+    ('u0001', '12345', 'Terry Huang'),
+    ('u0002', '12345', 'Linda Wang'),
+    ('u0003', '12345', 'Lisa Lin'),
+    ('u0004', '12345', 'Jeff Wu'),
+    ('u0005', '12345', 'Kris Wu'),
+    ('u0006', '12345', '王小明'),
+    ('u0007', '12345', '周大華'),
+    ('u0008', '12345', '任我行'),
+    ('u0009', '12345', '歐陽鋒'),
+    ('u0010', '12345', '林書豪');
+
+SELECT * FROM Users;
+
+-- 新增便當店資料表並插入資料
+CREATE TABLE CaterStores (
+    storeId int PRIMARY KEY AUTO_INCREMENT,
+    storeName varchar(20) NOT NULL,
+    address varchar(20),
+    phone char(20) NOT NULL );
+
+
+INSERT INTO CaterStores( storeName, address, phone ) VALUES
+    ( '丹丹漢堡', '台中市某某區', '0800092000'),
+    ( '甲一飯包', '台中市某某區', '1234214232'),
+    ( '爆漿牛丸', '香港尖沙嘴', '123456789'),
+    ( '八方油龍', '台中市某某區', '1234123413'),
+    ( '金拱門', '台中市某某區', '987654321');
+
+SELECT * FROM CaterStores;
+
+-- 各店家有提供的餐點
+CREATE TABLE Dishes (
+    dishId int PRIMARY KEY AUTO_INCREMENT,
+    storeId int NOT NULL,
+    dishName varchar(20) NOT NULL,
+    unitPrice int NOT NULL,
+    FOREIGN KEY (storeId) REFERENCES CaterStores(storeId)
+);
+
+INSERT INTO Dishes(storeId, dishName, unitPrice) VALUES
+    (1, '鮮蔬可樂餅蛋堡', 49),
+    (1, '赤肉麵線羹', 45),
+    (1, '火腿蛋三明治', 35),
+    (2, '雞腿便當', 65),
+    (2, '普通便當', 55),
+    (3, '撒尿牛丸', 49),
+    (4, '湯麵', 69),
+    (4, '鍋貼', 10),
+    (5, '大麥克', 65),
+    (5, '雙層牛肉吉事堡',75);
+
+SELECT * FROM Dishes;
+
+-- 新增訂單資料表
+CREATE TABLE Orders (
+    orderId int PRIMARY KEY AUTO_INCREMENT,
+    userId char(20) NOT NULL,
+    orderDate datetime NOT NULL );
+
+INSERT INTO Orders( userId, orderDate ) VALUES
+    ('u0001', '2020-8-9 9:12:11' ),
+    ('u0002', '2020-8-9 9:30:54' ),
+    ('u0007', '2020-8-9 9:44:16' ),
+    ('u0009', '2020-8-9 10:23:32' ),
+    ('u0010', '2020-8-9 10:41:44' ),
+    ('u0004', '2020-8-9 10:56:12' ),
+    ('u0005', '2020-8-9 13:55:42' ),
+    ('u0008', '2020-8-9 14:00:11' ),
+    ('u0005', '2020-8-9 14:25:21' ),
+    ('u0002', '2020-8-9 15:33:25' );
+
+SELECT * FROM Orders;
+
+-- 新增訂單細節資料表
+CREATE TABLE Order_details (
+    orderId int NOT NULL,
+    dishId int NOT NULL,
+    quantity int NOT NULL,
+    FOREIGN KEY (orderId) REFERENCES Orders( orderId ), 
+    FOREIGN KEY (dishId) REFERENCES Dishes( dishId ),
+    UNIQUE( orderId, dishId )
+);
+
+INSERT INTO Order_details VALUES
+    ( 1, 1, 1 ),
+    ( 2, 1, 2 ),
+    ( 3, 2, 4 ),
+    ( 3, 4, 1 ),
+    ( 4, 5, 1 ),
+    ( 5, 6, 2 ),
+    ( 5, 7, 1 ),
+    ( 6, 2, 1 ),
+    ( 7, 8, 2 ),
+    ( 8, 9, 3 ),
+    ( 8, 10, 1 ),
+    ( 9, 2, 1 ),
+    ( 9, 4, 1 ),
+    ( 10, 10 , 1);
+
+-- 統計2020/08/09 各店家可收到的帳款
+SELECT cs.storeName, SUM( d.unitPrice * od.quantity ) as `Total`, DATE(o.orderDate) as `Date` 
+    FROM CaterStores cs LEFT 
+    JOIN Dishes d ON cs.storeId = d.storeId 
+    JOIN Order_details od ON od.dishId = d.dishId 
+    JOIN Orders o ON o.orderId = od.orderId 
+    WHERE DATE(o.orderDate) = '2020-08-09' 
+    GROUP BY(cs.storeId);
+
+-- 統計2020/08/09 各訂單花費
+SELECT o.orderId, o.orderDate, u.name, SUM( od.quantity * d.unitPrice ) as `TotalPrice` 
+    FROM Orders o 
+    JOIN Users u ON u.userId = o.userId 
+    JOIN Order_details od ON o.orderId = od.orderId 
+    JOIN Dishes d ON d.dishId = od.dishId 
+    WHERE DATE(o.orderDate) = '2020-08-09' 
+    GROUP BY o.orderId;
+
+-- 統計2020/08/09 各使用者的總花費
+SELECT u.userId, u.name as userName, SUM( od.quantity * d.unitPrice ) as `Total`, DATE(o.orderDate) as `Date`
+    FROM Orders o 
+    JOIN Users u ON u.userId = o.userId 
+    JOIN Order_details od ON o.orderId = od.orderId 
+    JOIN Dishes d ON d.dishId = od.dishId 
+    WHERE DATE(o.orderDate) = '2020-08-09' 
+    GROUP BY u.userId;
